@@ -1,13 +1,22 @@
+// src/app/app.component.ts
+
 import { Component } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { RouterOutlet, RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet],
-  templateUrl: './app.component.html',
-  styleUrl: './app.component.css'
+  imports: [RouterOutlet, RouterLink],
+  template: `
+    <h1>{{ title }}</h1>
+    <nav>
+      <a routerLink="/cornerstone-viewport">Cornerstone Viewport</a> |
+      <a routerLink="/polyseg">Polyseg</a>
+    </nav>
+    <router-outlet></router-outlet>
+  `,
+  styleUrl: './app.component.css',
 })
 export class AppComponent {
-  title = 'angular-cornerstone3d';
+  title = 'Angular Cornerstone3D';
 }
