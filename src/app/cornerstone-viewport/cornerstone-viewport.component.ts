@@ -7,7 +7,10 @@ import {
   Enums,
   volumeLoader,
   Types,
+  cornerstoneStreamingImageVolumeLoader,
 } from '@cornerstonejs/core';
+import * as cornerstone from '@cornerstonejs/core';
+volumeLoader.registerUnknownVolumeLoader(cornerstoneStreamingImageVolumeLoader);
 
 @Component({
   selector: 'app-cornerstone-viewport',
@@ -34,6 +37,7 @@ export class CornerstoneViewportComponent implements OnInit {
       return;
     }
     this.running = true;
+
     await initDemo();
 
     const imageIds = await createImageIdsAndCacheMetaData({
@@ -64,7 +68,7 @@ export class CornerstoneViewportComponent implements OnInit {
     ) as Types.IVolumeViewport;
 
     const volumeId = 'myVolume';
-    const volume = await volumeLoader.createAndCacheEmptyVolume(volumeId, {
+    const volume = await volumeLoader.createAndCacheVolume(volumeId, {
       imageIds,
     });
 
@@ -73,5 +77,9 @@ export class CornerstoneViewportComponent implements OnInit {
     viewport.setVolumes([{ volumeId }]);
 
     viewport.render();
+
+    setTimeout(() => {
+      debugger;
+    }, 2000);
   }
 }

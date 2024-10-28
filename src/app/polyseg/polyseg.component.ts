@@ -17,7 +17,6 @@ import { initDemo, createImageIdsAndCacheMetaData } from '../../lib';
 import * as cornerstoneTools from '@cornerstonejs/tools';
 
 const {
-  SegmentationDisplayTool,
   ToolGroupManager,
   Enums: csToolsEnums,
   segmentation,
@@ -90,18 +89,12 @@ export class PolysegComponent implements OnInit, AfterViewInit {
 
     await initDemo();
 
-    cornerstoneTools.addTool(SegmentationDisplayTool);
     cornerstoneTools.addTool(PlanarFreehandContourSegmentationTool);
 
     const toolGroup1 = ToolGroupManager.createToolGroup(toolGroupId1);
     const toolGroup2 = ToolGroupManager.createToolGroup(toolGroupId2);
 
     toolGroup1.addTool(PlanarFreehandContourSegmentationTool.toolName);
-    toolGroup1.addTool(SegmentationDisplayTool.toolName);
-    toolGroup2.addTool(SegmentationDisplayTool.toolName);
-
-    toolGroup1.setToolEnabled(SegmentationDisplayTool.toolName);
-    toolGroup2.setToolEnabled(SegmentationDisplayTool.toolName);
 
     toolGroup1.setToolActive(PlanarFreehandContourSegmentationTool.toolName, {
       bindings: [
@@ -121,7 +114,7 @@ export class PolysegComponent implements OnInit, AfterViewInit {
       wadoRsRoot: 'https://d3t6nz73ql33tx.cloudfront.net/dicomweb',
     });
 
-    const volume = await volumeLoader.createAndCacheEmptyVolume(volumeId, {
+    const volume = await volumeLoader.createAndCacheVolume(volumeId, {
       imageIds,
     });
 
@@ -180,11 +173,6 @@ export class PolysegComponent implements OnInit, AfterViewInit {
       {
         segmentationId,
         type: csToolsEnums.SegmentationRepresentations.Labelmap,
-        options: {
-          polySeg: {
-            enabled: true,
-          },
-        },
       },
     ]);
   }
