@@ -1,6 +1,12 @@
 // src/app/cornerstone-viewport/cornerstone-viewport.component.ts
 
-import { Component, OnInit, ElementRef, ViewChild } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  ElementRef,
+  ViewChild,
+  NgZone,
+} from '@angular/core';
 import { createImageIdsAndCacheMetaData, initDemo } from '../../lib';
 import {
   RenderingEngine,
@@ -29,8 +35,12 @@ export class CornerstoneViewportComponent implements OnInit {
   private running = false;
 
   ngOnInit() {
-    this.setup();
+    this.ngZone.runOutsideAngular(() => {
+      this.setup();
+    });
   }
+
+  constructor(private ngZone: NgZone) {}
 
   async setup() {
     if (this.running) {
