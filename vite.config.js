@@ -23,32 +23,17 @@ import { viteCommonjs } from "@originjs/vite-plugin-commonjs";
  * ```ts
  * optimizeDeps: {
  *   exclude: [
- *     "@cornerstonejs/codec-new-decoder",
+ *     "@cornerstonejs/dicom-image-loader",
  *     // ... existing codecs
  *   ]
  * }
  * ```
  */
 export default defineConfig({
-  plugins: [
-    react(),
-    // for dicom-parser
-    viteCommonjs(),
-  ],
+  plugins: [],
   // seems like only required in dev mode
   optimizeDeps: {
-    exclude: [
-      "@cornerstonejs/dicom-image-loader",
-      "@cornerstonejs/codec-charls",
-      "@cornerstonejs/codec-libjpeg-turbo-8bit",
-      "@cornerstonejs/codec-openjpeg",
-      "@cornerstonejs/codec-openjph",
-      "dicom-parser",
-      "@cornerstonejs/core",
-      "@cornerstonejs/dicom-image-loader",
-      "@cornerstonejs/tools",
-    ],
-    include: [],
+    exclude: ["@cornerstonejs/dicom-image-loader"],
+    include: ["dicom-parser"],
   },
-  assetsInclude: ["**/*.wasm"],
 });
