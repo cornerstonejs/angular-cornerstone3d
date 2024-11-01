@@ -7,7 +7,8 @@ import {
   ViewChild,
   NgZone,
 } from '@angular/core';
-import { createImageIdsAndCacheMetaData, initDemo } from '../../lib';
+import { api } from 'dicomweb-client';
+import cornerstoneDICOMImageLoader from '@cornerstonejs/dicom-image-loader';
 import {
   RenderingEngine,
   Enums,
@@ -15,7 +16,10 @@ import {
   Types,
   cornerstoneStreamingImageVolumeLoader,
 } from '@cornerstonejs/core';
-import * as cornerstone from '@cornerstonejs/core';
+import { init as csRenderInit, cache } from '@cornerstonejs/core';
+import { init as csToolsInit } from '@cornerstonejs/tools';
+import { init as dicomImageLoaderInit } from '@cornerstonejs/dicom-image-loader';
+
 volumeLoader.registerUnknownVolumeLoader(cornerstoneStreamingImageVolumeLoader);
 
 @Component({
@@ -35,9 +39,7 @@ export class CornerstoneViewportComponent implements OnInit {
   private running = false;
 
   ngOnInit() {
-    this.ngZone.runOutsideAngular(() => {
-      this.setup();
-    });
+    this.setup();
   }
 
   constructor(private ngZone: NgZone) {}
@@ -48,7 +50,60 @@ export class CornerstoneViewportComponent implements OnInit {
     }
     this.running = true;
 
-    await initDemo();
+    async function createImageIdsAndCacheMetaData({
+      StudyInstanceUID,
+      SeriesInstanceUID,
+      SOPInstanceUID = null,
+      wadoRsRoot,
+      client = null,
+    }) {
+      const SOP_INSTANCE_UID = '00080018';
+      const SERIES_INSTANCE_UID = '0020000E';
+
+      const studySearchOptions = {
+        studyInstanceUID: StudyInstanceUID,
+        seriesInstanceUID: SeriesInstanceUID,
+      };
+
+      client =
+        client ||
+        new api.DICOMwebClient({ url: wadoRsRoot as string, singlepart: true });
+      const instances = await client.retrieveSeriesMetadata(studySearchOptions);
+      const imageIds = instances.map((instanceMetaData) => {
+        const SeriesInstanceUID =
+          instanceMetaData[SERIES_INSTANCE_UID].Value[0];
+        const SOPInstanceUIDToUse =
+          SOPInstanceUID || instanceMetaData[SOP_INSTANCE_UID].Value[0];
+
+        const prefix = 'wadors:';
+
+        const imageId =
+          prefix +
+          wadoRsRoot +
+          '/studies/' +
+          StudyInstanceUID +
+          '/series/' +
+          SeriesInstanceUID +
+          '/instances/' +
+          SOPInstanceUIDToUse +
+          '/frames/1';
+
+        cornerstoneDICOMImageLoader.wadors.metaDataManager.add(
+          imageId,
+          instanceMetaData
+        );
+        return imageId;
+      });
+
+      // we don't want to add non-pet
+      // Note: for 99% of scanners SUV calculation is consistent bw slices
+
+      return imageIds;
+    }
+
+    await csRenderInit();
+    await csToolsInit();
+    dicomImageLoaderInit({ maxWebWorkers: 1 });
 
     const imageIds = await createImageIdsAndCacheMetaData({
       StudyInstanceUID:
@@ -82,14 +137,17 @@ export class CornerstoneViewportComponent implements OnInit {
       imageIds,
     });
 
-    (volume as any).load();
+    this.ngZone.run(() => {
+      (volume as any).load();
 
-    viewport.setVolumes([{ volumeId }]);
+      viewport.setVolumes([{ volumeId }]);
 
-    viewport.render();
+      viewport.render();
+    });
 
     setTimeout(() => {
       debugger;
+      cache;
     }, 2000);
   }
 }

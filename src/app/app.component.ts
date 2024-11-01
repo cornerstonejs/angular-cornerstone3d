@@ -9,10 +9,7 @@ import { RouterOutlet, RouterLink } from '@angular/router';
   imports: [RouterOutlet, RouterLink],
   template: `
     <h1>{{ title }}</h1>
-    <nav>
-      <a routerLink="/cornerstone-viewport">Cornerstone Viewport</a> |
-      <a routerLink="/polyseg">Polyseg</a>
-    </nav>
+    <nav><a routerLink="/cornerstone-viewport">Cornerstone Viewport</a> |</nav>
     <router-outlet></router-outlet>
   `,
   styleUrl: './app.component.css',
