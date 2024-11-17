@@ -146,7 +146,6 @@ export class CornerstoneViewportComponent implements OnInit {
     });
 
     setTimeout(() => {
-      debugger;
       cache;
     }, 2000);
   }
