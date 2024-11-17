@@ -26,8 +26,7 @@
             "assets": [
               {
                 "glob": "**/*",
-                "input": "node_modules/@cornerstonejs/dicom-image-loader/dist/esm",
-                "output": "/assets/dicom-worker"
+                "input": "public",
               }
             ],
             "styles": [
