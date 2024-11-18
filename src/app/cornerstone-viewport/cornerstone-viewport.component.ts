@@ -103,7 +103,7 @@ export class CornerstoneViewportComponent implements OnInit {
 
     await csRenderInit();
     await csToolsInit();
-    dicomImageLoaderInit({ maxWebWorkers: 1 });
+    dicomImageLoaderInit({ maxWebWorkers: 8 });
 
     const imageIds = await createImageIdsAndCacheMetaData({
       StudyInstanceUID:
