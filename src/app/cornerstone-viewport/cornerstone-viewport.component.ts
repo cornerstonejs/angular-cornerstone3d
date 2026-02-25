@@ -8,16 +8,16 @@ import {
   NgZone,
 } from '@angular/core';
 import { api } from 'dicomweb-client';
-import cornerstoneDICOMImageLoader from '@cornerstonejs/dicom-image-loader';
+import { init as dicomImageLoaderInit, wadors } from '@cornerstonejs/dicom-image-loader';
 import {
   RenderingEngine,
   Enums,
   volumeLoader,
-  Types,
+  getWebWorkerManager,
+  type Types,
+  init as csRenderInit,
 } from '@cornerstonejs/core';
-import { init as csRenderInit, cache } from '@cornerstonejs/core';
 import { init as csToolsInit } from '@cornerstonejs/tools';
-import { init as dicomImageLoaderInit } from '@cornerstonejs/dicom-image-loader';
 
 @Component({
   selector: 'app-cornerstone-viewport',
@@ -67,20 +67,26 @@ export class CornerstoneViewportComponent implements OnInit {
         seriesInstanceUID: SeriesInstanceUID,
       };
 
-      // @ts-ignore
-      client =
+      const dicomClient: api.DICOMwebClient =
         client ||
         new api.DICOMwebClient({ url: wadoRsRoot as string, singlepart: true });
 
-      // @ts-ignore
-      const instances = await client.retrieveSeriesMetadata(studySearchOptions);
-      // @ts-ignore
+      // dicomweb-client 0.11 types require 'request'; runtime accepts it optional
+      const instances = await dicomClient.retrieveSeriesMetadata(
+        studySearchOptions as Parameters<api.DICOMwebClient['retrieveSeriesMetadata']>[0]
+      );
       const imageIds = instances.map((instanceMetaData) => {
-        // @ts-ignore
-        const SeriesInstanceUID =
-          instanceMetaData[SERIES_INSTANCE_UID].Value[0];
+        const meta = instanceMetaData as Record<string, { Value?: string[] }>;
+        const seriesUID = meta[SERIES_INSTANCE_UID]?.Value?.[0];
+        if (!seriesUID) {
+          throw new Error('Series Instance UID not found in metadata');
+        }
+        const sopUID = meta[SOP_INSTANCE_UID]?.Value?.[0];
         const SOPInstanceUIDToUse =
-          SOPInstanceUID || instanceMetaData[SOP_INSTANCE_UID].Value[0];
+          SOPInstanceUID || sopUID;
+        if (!SOPInstanceUIDToUse) {
+          throw new Error('SOP Instance UID not found in metadata');
+        }
 
         const prefix = 'wadors:';
 
@@ -90,15 +96,12 @@ export class CornerstoneViewportComponent implements OnInit {
           '/studies/' +
           StudyInstanceUID +
           '/series/' +
-          SeriesInstanceUID +
+          seriesUID +
           '/instances/' +
           SOPInstanceUIDToUse +
           '/frames/1';
 
-        cornerstoneDICOMImageLoader.wadors.metaDataManager.add(
-          imageId,
-          instanceMetaData
-        );
+        wadors.metaDataManager.add(imageId, instanceMetaData as never);
         return imageId;
       });
 
@@ -108,8 +111,18 @@ export class CornerstoneViewportComponent implements OnInit {
       return imageIds;
     }
 
-    await csRenderInit();
-    await csToolsInit();
+    csRenderInit();
+    csToolsInit();
+    // Register our worker first so init() does not register the broken @fs/... worker (dev)
+    const workerUrl = new URL(
+      'cs-dicom-loader/decodeImageFrameWorker.js',
+      document.baseURI || window.location.origin + '/'
+    ).href;
+    getWebWorkerManager().registerWorker(
+      'dicomImageLoader',
+      () => new Worker(workerUrl, { type: 'module' }),
+      { maxWorkerInstances: 1, overwrite: true }
+    );
     dicomImageLoaderInit({ maxWebWorkers: 1 });
 
     const imageIds = await createImageIdsAndCacheMetaData({
@@ -117,7 +130,7 @@ export class CornerstoneViewportComponent implements OnInit {
         '1.3.6.1.4.1.14519.5.2.1.7009.2403.334240657131972136850343327463',
       SeriesInstanceUID:
         '1.3.6.1.4.1.14519.5.2.1.7009.2403.226151125820845824875394858561',
-      wadoRsRoot: 'https://d3t6nz73ql33tx.cloudfront.net/dicomweb',
+      wadoRsRoot: 'https://d14fa38qiwhyfd.cloudfront.net/dicomweb',
     });
 
     const renderingEngineId = 'myRenderingEngine';
@@ -141,7 +154,7 @@ export class CornerstoneViewportComponent implements OnInit {
 
     const volumeId = 'myVolume';
     const volume = await volumeLoader.createAndCacheVolume(volumeId, {
-      imageIds: imageIds.slice(0, 2),
+      imageIds,
     });
 
     (volume as any).load();
@@ -149,10 +162,5 @@ export class CornerstoneViewportComponent implements OnInit {
     viewport.setVolumes([{ volumeId }]);
 
     viewport.render();
-
-    setTimeout(() => {
-      debugger;
-      cache;
-    }, 2000);
   }
 }
