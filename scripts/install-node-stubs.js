@@ -1,6 +1,10 @@
 /**
- * Creates node_modules/fs and node_modules/path that stub Node built-ins for browser builds.
- * Cornerstone codec packages require('fs') and require('path'); this lets the bundler resolve them.
+ * Creates node_modules/<name> packages that stub Node built-ins for browser builds,
+ * so the bundler can resolve the bare requires that reach the browser bundle:
+ *  - fs, path: the Cornerstone codec packages' emscripten glue
+ *  - url: @kitware/vtk.js 36 -> xmlbuilder2@4 -> @oozcitak/url
+ * Cornerstone3D's own example builds do the same thing through webpack's
+ * resolve.fallback (fs: false, path: path-browserify, url: false).
  */
 const fs = require('fs');
 const path = require('path');
@@ -16,6 +20,14 @@ const stubs = {
   path: {
     'package.json': JSON.stringify({ name: 'path', version: '0.0.0', main: 'index.js' }, null, 2),
     'index.js': "function noop() { return ''; }\nmodule.exports = { join: noop, resolve: noop, dirname: noop, basename: noop };",
+  },
+  // Only domainToASCII/domainToUnicode are reached (URL host parsing); pass the
+  // domain through rather than throwing, which is what an empty stub would do.
+  url: {
+    'package.json': JSON.stringify({ name: 'url', version: '0.0.0', main: 'index.js' }, null, 2),
+    'index.js':
+      'function identity(domain) { return domain; }\n' +
+      'module.exports = { domainToASCII: identity, domainToUnicode: identity };',
   },
 };
 

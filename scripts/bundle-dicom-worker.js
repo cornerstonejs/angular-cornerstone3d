@@ -16,6 +16,21 @@ const entry = path.join(
 const outDir = path.join(root, 'public', 'cs-dicom-loader');
 const outfile = path.join(outDir, 'decodeImageFrameWorker.js');
 
+// Bare specifier used by each decoder -> path served by copy-codec-wasm.js.
+// Keep the right-hand side in sync with scripts/copy-codec-wasm.js and the
+// codec asset globs in angular.json.
+const wasmSpecifiers = {
+  '@cornerstonejs/codec-charls/decodewasm':
+    'codecs/codec-charls/charlswasm_decode.wasm',
+  '@cornerstonejs/codec-libjpeg-turbo-8bit/decodewasm':
+    'codecs/codec-libjpeg-turbo-8bit/libjpegturbowasm_decode.wasm',
+  '@cornerstonejs/codec-openjpeg/decodewasm':
+    'codecs/codec-openjpeg/openjpegwasm_decode.wasm',
+  '@cornerstonejs/codec-openjph/wasm': 'codecs/codec-openjph/openjphjs.wasm',
+};
+
+const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 if (!fs.existsSync(path.dirname(entry))) {
   console.warn('bundle-dicom-worker: dicom-image-loader not found, skipping.');
   process.exit(0);
@@ -35,13 +50,36 @@ esbuild
     logLevel: 'info',
   })
   .then(() => {
-    // Patch worker: use codecs/ path and real .wasm filenames so Angular assets can copy from node_modules
+    // The decoders resolve their wasm with `new URL('@cornerstonejs/codec-*/...',
+    // import.meta.url)`. esbuild leaves that bare specifier alone, so rewrite each
+    // one to the served codec path that copy-codec-wasm.js populates.
     let code = fs.readFileSync(outfile, 'utf8');
-    code = code.replace(/@cornerstonejs\//g, 'codecs/');
-    code = code.replace(/codecs\/codec-charls\/decodewasm/g, 'codecs/codec-charls/charlswasm_decode.wasm');
-    code = code.replace(/codecs\/codec-libjpeg-turbo-8bit\/decodewasm/g, 'codecs/codec-libjpeg-turbo-8bit/libjpegturbowasm_decode.wasm');
-    code = code.replace(/codecs\/codec-openjpeg\/decodewasm/g, 'codecs/codec-openjpeg/openjpegwasm_decode.wasm');
-    code = code.replace(/codecs\/codec-openjph\/wasm/g, 'codecs/codec-openjph/openjphjs.wasm');
+    const missing = [];
+
+    for (const [specifier, servedPath] of Object.entries(wasmSpecifiers)) {
+      const pattern = new RegExp(`(new URL\\(\\s*["'])${escapeRegExp(specifier)}(["'])`, 'g');
+      const patched = code.replace(pattern, `$1${servedPath}$2`);
+      if (patched === code) {
+        missing.push(specifier);
+      }
+      code = patched;
+    }
+
+    if (missing.length) {
+      throw new Error(
+        'expected wasm URL specifiers not found in the bundle - the dicom-image-loader ' +
+          `decoders likely changed:\n  ${missing.join('\n  ')}`
+      );
+    }
+
+    // Nothing else may reach for a bare @cornerstonejs specifier at runtime.
+    const leftover = code.match(/(?:new URL|import)\(\s*["']@cornerstonejs\/[^"']+["']/g);
+    if (leftover) {
+      throw new Error(
+        `unhandled runtime reference to a bare specifier:\n  ${[...new Set(leftover)].join('\n  ')}`
+      );
+    }
+
     fs.writeFileSync(outfile, code);
     console.log('bundle-dicom-worker: wrote', outfile);
   })

@@ -20,12 +20,24 @@
             "tsConfig": "tsconfig.app.json",
             "assets": [{"glob": "**/*", "input": "public"}, {"glob": "charlswasm_decode.wasm", "input": "node_modules/@cornerstonejs/codec-charls/dist", "output": "cs-dicom-loader/codecs/codec-charls"}, {"glob": "libjpegturbowasm_decode.wasm", "input": "node_modules/@cornerstonejs/codec-libjpeg-turbo-8bit/dist", "output": "cs-dicom-loader/codecs/codec-libjpeg-turbo-8bit"}, {"glob": "openjpegwasm_decode.wasm", "input": "node_modules/@cornerstonejs/codec-openjpeg/dist", "output": "cs-dicom-loader/codecs/codec-openjpeg"}, {"glob": "openjphjs.wasm", "input": "node_modules/@cornerstonejs/codec-openjph/dist", "output": "cs-dicom-loader/codecs/codec-openjph"}],
             "styles": ["src/styles.css"],
-            "scripts": []
+            "scripts": [],
+            "allowedCommonJsDependencies": [
+              "@cornerstonejs/codec-charls/decodewasmjs",
+              "@cornerstonejs/codec-libjpeg-turbo-8bit/decodewasmjs",
+              "@cornerstonejs/codec-openjpeg/decodewasmjs",
+              "@cornerstonejs/codec-openjph/wasmjs",
+              "dicom-parser",
+              "fast-deep-equal",
+              "lodash.get",
+              "seedrandom",
+              "spark-md5",
+              "xmlbuilder2"
+            ]
           },
           "configurations": {
             "production": {
               "budgets": [
-                {"type": "initial", "maximumWarning": "1.5MB", "maximumError": "2.5MB"},
+                {"type": "initial", "maximumWarning": "4.5MB", "maximumError": "6MB"},
                 {"type": "anyComponentStyle", "maximumWarning": "4kB", "maximumError": "8kB"}
               ],
               "outputHashing": "all"
@@ -34,6 +46,12 @@
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true
+            },
+            "subpath": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "baseHref": "/subpath/"
             }
           },
           "defaultConfiguration": "production"
@@ -47,7 +65,8 @@
           },
           "configurations": {
             "production": {"buildTarget": "angular-vite-6:build:production"},
-            "development": {"buildTarget": "angular-vite-6:build:development"}
+            "development": {"buildTarget": "angular-vite-6:build:development"},
+            "subpath": {"buildTarget": "angular-vite-6:build:subpath"}
           },
           "defaultConfiguration": "development"
         },

@@ -17,6 +17,7 @@ import {
   type Types,
   init as csRenderInit,
 } from '@cornerstonejs/core';
+import { utilities as metadataUtilities } from '@cornerstonejs/metadata';
 import { init as csToolsInit } from '@cornerstonejs/tools';
 
 @Component({
@@ -101,7 +102,13 @@ export class CornerstoneViewportComponent implements OnInit {
           SOPInstanceUIDToUse +
           '/frames/1';
 
+        // Legacy wadors store (still registered by the loader in 5.x) plus the
+        // typed metadata framework introduced in Cornerstone3D 5.
         wadors.metaDataManager.add(imageId, instanceMetaData as never);
+        metadataUtilities.addDicomWebInstance(
+          imageId,
+          instanceMetaData as Record<string, unknown>
+        );
         return imageId;
       });
 
@@ -152,12 +159,13 @@ export class CornerstoneViewportComponent implements OnInit {
       viewportId
     ) as Types.IVolumeViewport;
 
-    const volumeId = 'myVolume';
-    const volume = await volumeLoader.createAndCacheVolume(volumeId, {
+    // Loader scheme + volume name, as in the Cornerstone3D 5.x examples
+    const volumeId = 'cornerstoneStreamingImageVolume:myVolume';
+    const volume = (await volumeLoader.createAndCacheVolume(volumeId, {
       imageIds,
-    });
+    })) as Types.IStreamingImageVolume;
 
-    (volume as any).load();
+    volume.load();
 
     viewport.setVolumes([{ volumeId }]);
 

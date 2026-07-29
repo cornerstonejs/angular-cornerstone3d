@@ -1,0 +1,17 @@
+# Mirrors the Cornerstone3D 5.x monorepo's pnpm settings so this app resolves
+# dependencies the same way CS3D itself does.
+#
+# nodeLinker: hoisted is required here: the Angular asset globs and the
+# scripts/ helpers read node_modules/@cornerstonejs/codec-*/dist/*.wasm and
+# node_modules/@cornerstonejs/dicom-image-loader/dist/esm/*, which are
+# transitive dependencies and would not exist at the top level under pnpm's
+# default isolated layout.
+nodeLinker: hoisted
+strictPeerDependencies: false
+
+allowBuilds:
+  '@parcel/watcher': true
+  core-js-pure: true
+  esbuild: true
+  lmdb: true
+  msgpackr-extract: true
