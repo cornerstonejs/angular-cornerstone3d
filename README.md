@@ -1,10 +1,26 @@
-# AngularVite6
+# Angular + Cornerstone3D
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.0.2.
+This project uses [Angular CLI](https://github.com/angular/angular-cli) with Cornerstone3D for DICOM viewing. It can run at the site root or under a subpath (e.g. `/subpath/`).
+
+## Build and run
+
+### Main path (app at `/`)
+
+- **Dev:** `npm start` or `npm run dev` → open http://localhost:4200/
+- **Build:** `npm run build` → output in `dist/angular-vite-6/`
+- **Preview:** `npm run preview` → builds then serves at http://localhost:4201/ (use this if dev server doesn’t load images)
+
+### Subpath (app at `/subpath/`)
+
+- **Dev:** `npm run dev:subpath` → open http://localhost:4200/subpath/
+- **Build:** `npm run build:subpath` → output in `dist/angular-vite-6/` (asset URLs use `/subpath/`)
+- **Preview:** `npm run preview:subpath` → builds for subpath then serves at http://localhost:4202/
+
+For production, deploy the build from `build:subpath` to a server that serves the app under `/subpath/`.
 
 ## Development server
 
-To start a local development server, run:
+To start a local development server (main path), run:
 
 ```bash
 ng serve
@@ -28,13 +44,35 @@ ng generate --help
 
 ## Building
 
-To build the project run:
+To build the project (main path):
 
 ```bash
 ng build
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+To build for deployment under a subpath:
+
+```bash
+npm run build:subpath
+```
+
+Build artifacts are in `dist/angular-vite-6/`. The production build optimizes your application for performance and speed.
+
+## Preview (production build locally)
+
+To build and serve the production output locally (useful when the dev server doesn’t load images or to test the real bundle):
+
+```bash
+npm run preview
+```
+
+Then open http://localhost:4201/. For a subpath build:
+
+```bash
+npm run preview:subpath
+```
+
+Then open http://localhost:4202/. The first run may prompt to install the `serve` package if needed.
 
 ## Running unit tests
 
