@@ -18,7 +18,7 @@
             "browser": "src/main.ts",
             "polyfills": ["zone.js"],
             "tsConfig": "tsconfig.app.json",
-            "assets": [{"glob": "**/*", "input": "public"}, {"glob": "charlswasm_decode.wasm", "input": "node_modules/@cornerstonejs/codec-charls/dist", "output": "cs-dicom-loader/codecs/codec-charls"}, {"glob": "libjpegturbowasm_decode.wasm", "input": "node_modules/@cornerstonejs/codec-libjpeg-turbo-8bit/dist", "output": "cs-dicom-loader/codecs/codec-libjpeg-turbo-8bit"}, {"glob": "openjpegwasm_decode.wasm", "input": "node_modules/@cornerstonejs/codec-openjpeg/dist", "output": "cs-dicom-loader/codecs/codec-openjpeg"}, {"glob": "openjphjs.wasm", "input": "node_modules/@cornerstonejs/codec-openjph/dist", "output": "cs-dicom-loader/codecs/codec-openjph"}],
+            "assets": [{"glob": "**/*", "input": "public"}, {"glob": "charlswasm_decode.wasm", "input": "node_modules/@cornerstonejs/codec-charls/dist", "output": "cs-dicom-loader/wasm"}, {"glob": "libjpegturbowasm_decode.wasm", "input": "node_modules/@cornerstonejs/codec-libjpeg-turbo-8bit/dist", "output": "cs-dicom-loader/wasm"}, {"glob": "openjpegwasm_decode.wasm", "input": "node_modules/@cornerstonejs/codec-openjpeg/dist", "output": "cs-dicom-loader/wasm"}, {"glob": "openjphjs.wasm", "input": "node_modules/@cornerstonejs/codec-openjph/dist", "output": "cs-dicom-loader/wasm"}],
             "styles": ["src/styles.css"],
             "scripts": [],
             "allowedCommonJsDependencies": [
@@ -76,7 +76,7 @@
           "options": {
             "polyfills": ["zone.js", "zone.js/testing"],
             "tsConfig": "tsconfig.spec.json",
-            "assets": [{"glob": "**/*", "input": "public"}, {"glob": "charlswasm_decode.wasm", "input": "node_modules/@cornerstonejs/codec-charls/dist", "output": "cs-dicom-loader/codecs/codec-charls"}, {"glob": "libjpegturbowasm_decode.wasm", "input": "node_modules/@cornerstonejs/codec-libjpeg-turbo-8bit/dist", "output": "cs-dicom-loader/codecs/codec-libjpeg-turbo-8bit"}, {"glob": "openjpegwasm_decode.wasm", "input": "node_modules/@cornerstonejs/codec-openjpeg/dist", "output": "cs-dicom-loader/codecs/codec-openjpeg"}, {"glob": "openjphjs.wasm", "input": "node_modules/@cornerstonejs/codec-openjph/dist", "output": "cs-dicom-loader/codecs/codec-openjph"}],
+            "assets": [{"glob": "**/*", "input": "public"}, {"glob": "charlswasm_decode.wasm", "input": "node_modules/@cornerstonejs/codec-charls/dist", "output": "cs-dicom-loader/wasm"}, {"glob": "libjpegturbowasm_decode.wasm", "input": "node_modules/@cornerstonejs/codec-libjpeg-turbo-8bit/dist", "output": "cs-dicom-loader/wasm"}, {"glob": "openjpegwasm_decode.wasm", "input": "node_modules/@cornerstonejs/codec-openjpeg/dist", "output": "cs-dicom-loader/wasm"}, {"glob": "openjphjs.wasm", "input": "node_modules/@cornerstonejs/codec-openjph/dist", "output": "cs-dicom-loader/wasm"}],
             "styles": ["src/styles.css"],
             "scripts": []
           }

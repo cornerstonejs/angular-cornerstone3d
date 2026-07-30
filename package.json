@@ -20,7 +20,10 @@
     "postinstall": "node scripts/install-node-stubs.js && node scripts/bundle-dicom-worker.js && node scripts/copy-codec-wasm.js",
     "prebuild": "node scripts/bundle-dicom-worker.js && node scripts/copy-codec-wasm.js",
     "bundle:worker": "node scripts/bundle-dicom-worker.js",
-    "copy:codec-wasm": "node scripts/copy-codec-wasm.js"
+    "copy:codec-wasm": "node scripts/copy-codec-wasm.js",
+    "link:cs3d": "node scripts/link-cs3d.js && node scripts/bundle-dicom-worker.js",
+    "link:cs3d:status": "node scripts/link-cs3d.js --status",
+    "unlink:cs3d": "node scripts/link-cs3d.js --restore && node scripts/bundle-dicom-worker.js"
   },
   "private": true,
   "dependencies": {

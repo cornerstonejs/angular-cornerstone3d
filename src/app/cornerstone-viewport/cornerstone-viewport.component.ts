@@ -130,7 +130,11 @@ export class CornerstoneViewportComponent implements OnInit {
       () => new Worker(workerUrl, { type: 'module' }),
       { maxWorkerInstances: 1, overwrite: true }
     );
-    dicomImageLoaderInit({ maxWebWorkers: 1 });
+    // One root for every codec's wasm, populated by scripts/copy-codec-wasm.js
+    // and the codec asset globs in angular.json. Resolving it against baseURI
+    // keeps a single build working at the site root and under a subpath.
+    const wasmBasePath = new URL('cs-dicom-loader/wasm/', document.baseURI).href;
+    dicomImageLoaderInit({ maxWebWorkers: 1, wasmBasePath });
 
     const imageIds = await createImageIdsAndCacheMetaData({
       StudyInstanceUID:

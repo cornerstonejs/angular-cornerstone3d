@@ -3,37 +3,64 @@
  * dependencies (including comlink and ./shared/*) into a single ESM file.
  * That file is served at /cs-dicom-loader/decodeImageFrameWorker.js so the
  * worker loads without bare specifier or relative-import failures in preview.
+ *
+ * The codec WASM paths are NOT rewritten here. The app passes `wasmBasePath` to
+ * the loader's init() instead (see cornerstone-viewport.component.ts), and the
+ * decoders resolve their binaries from it at runtime.
  */
 const esbuild = require('esbuild');
 const path = require('path');
 const fs = require('fs');
 
 const root = path.resolve(__dirname, '..');
-const entry = path.join(
+const loaderDist = path.join(
   root,
-  'node_modules/@cornerstonejs/dicom-image-loader/dist/esm/decodeImageFrameWorker.js'
+  'node_modules/@cornerstonejs/dicom-image-loader/dist/esm'
 );
+const entry = path.join(loaderDist, 'decodeImageFrameWorker.js');
 const outDir = path.join(root, 'public', 'cs-dicom-loader');
 const outfile = path.join(outDir, 'decodeImageFrameWorker.js');
 
-// Bare specifier used by each decoder -> path served by copy-codec-wasm.js.
-// Keep the right-hand side in sync with scripts/copy-codec-wasm.js and the
-// codec asset globs in angular.json.
-const wasmSpecifiers = {
-  '@cornerstonejs/codec-charls/decodewasm':
-    'codecs/codec-charls/charlswasm_decode.wasm',
-  '@cornerstonejs/codec-libjpeg-turbo-8bit/decodewasm':
-    'codecs/codec-libjpeg-turbo-8bit/libjpegturbowasm_decode.wasm',
-  '@cornerstonejs/codec-openjpeg/decodewasm':
-    'codecs/codec-openjpeg/openjpegwasm_decode.wasm',
-  '@cornerstonejs/codec-openjph/wasm': 'codecs/codec-openjph/openjphjs.wasm',
-};
-
-const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-if (!fs.existsSync(path.dirname(entry))) {
+if (!fs.existsSync(loaderDist)) {
   console.warn('bundle-dicom-worker: dicom-image-loader not found, skipping.');
   process.exit(0);
+}
+
+/**
+ * wasmBasePath support landed after 5.6.12. Without it the decoders fall back to
+ * bare `@cornerstonejs/codec-*` specifiers that no bundler rewrites, and decoding
+ * fails with "expected magic word 00 61 73 6d" (the SPA fallback HTML). Warn at
+ * build time rather than failing, so `pnpm install` can complete and be followed
+ * by `pnpm link:cs3d`.
+ */
+function checkWasmBasePathSupport() {
+  const supportFile = path.join(loaderDist, 'shared', 'wasmBasePath.js');
+  if (fs.existsSync(supportFile)) {
+    return;
+  }
+
+  const version = (() => {
+    try {
+      return require('@cornerstonejs/dicom-image-loader/package.json').version;
+    } catch {
+      return 'unknown';
+    }
+  })();
+
+  console.warn(
+    [
+      '',
+      'bundle-dicom-worker: WARNING - the installed @cornerstonejs/dicom-image-loader',
+      `  (${version}) does not support the wasmBasePath option, which this app relies on`,
+      '  to locate the codec WASM binaries. Image decoding will fail at runtime.',
+      '',
+      '  Link a local Cornerstone3D build that has it:',
+      '    pnpm link:cs3d',
+      '',
+      '  or upgrade to a release that includes wasmBasePath and run pnpm unlink:cs3d.',
+      '',
+    ].join('\n')
+  );
 }
 
 fs.mkdirSync(outDir, { recursive: true });
@@ -50,37 +77,7 @@ esbuild
     logLevel: 'info',
   })
   .then(() => {
-    // The decoders resolve their wasm with `new URL('@cornerstonejs/codec-*/...',
-    // import.meta.url)`. esbuild leaves that bare specifier alone, so rewrite each
-    // one to the served codec path that copy-codec-wasm.js populates.
-    let code = fs.readFileSync(outfile, 'utf8');
-    const missing = [];
-
-    for (const [specifier, servedPath] of Object.entries(wasmSpecifiers)) {
-      const pattern = new RegExp(`(new URL\\(\\s*["'])${escapeRegExp(specifier)}(["'])`, 'g');
-      const patched = code.replace(pattern, `$1${servedPath}$2`);
-      if (patched === code) {
-        missing.push(specifier);
-      }
-      code = patched;
-    }
-
-    if (missing.length) {
-      throw new Error(
-        'expected wasm URL specifiers not found in the bundle - the dicom-image-loader ' +
-          `decoders likely changed:\n  ${missing.join('\n  ')}`
-      );
-    }
-
-    // Nothing else may reach for a bare @cornerstonejs specifier at runtime.
-    const leftover = code.match(/(?:new URL|import)\(\s*["']@cornerstonejs\/[^"']+["']/g);
-    if (leftover) {
-      throw new Error(
-        `unhandled runtime reference to a bare specifier:\n  ${[...new Set(leftover)].join('\n  ')}`
-      );
-    }
-
-    fs.writeFileSync(outfile, code);
+    checkWasmBasePathSupport();
     console.log('bundle-dicom-worker: wrote', outfile);
   })
   .catch((err) => {

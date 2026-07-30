@@ -28,17 +28,57 @@ pnpm install
 - **Build:** `pnpm build:subpath` → output in `dist/angular-vite-6/` (asset URLs use `/subpath/`)
 - **Preview:** `pnpm preview:subpath` → builds for subpath then serves at http://localhost:4202/subpath/
 
+There are two ways to exercise the subpath, and they test different things: `dev:subpath` runs the Vite dev server with `baseHref` `/subpath/` (fast rebuilds, unbundled deps), while `preview:subpath` runs the real production bundle behind a static server that mirrors a deployment. Check both before trusting a subpath change.
+
+Note that `dev` and `dev:subpath` both want port 4200, so a second one auto-selects the next free port — read the `➜ Local:` line for the URL it actually chose. In the dev server, requests to `/subpath/@fs/...` are normal: that is Vite's raw-filesystem route for pre-bundled dependencies out of `.angular/cache`. The worker and codec WASM are deliberately *not* served that way — they come from `/subpath/cs-dicom-loader/`, which is what makes them work in the production build too.
+
 For production, deploy the build from `build:subpath` to a server that serves the app under `/subpath/`.
 
 ## Cornerstone assets
 
-Cornerstone3D's DICOM image loader resolves its web worker and codec WASM with bare specifiers inside `new URL(...)`, which bundlers do not rewrite. Two `postinstall`/`prebuild` scripts work around that, the same way CS3D's own example builds do with webpack `resolve.fallback`:
+Cornerstone3D's DICOM image loader resolves its web worker and codec WASM with bare specifiers inside `new URL(...)`, which bundlers do not rewrite. Three `postinstall`/`prebuild` scripts deal with that:
 
-- `scripts/bundle-dicom-worker.js` — bundles `decodeImageFrameWorker` into `public/cs-dicom-loader/`, rewriting each `@cornerstonejs/codec-*` wasm specifier to a served path. It fails the build if a specifier it expects is gone, so a Cornerstone upgrade cannot silently produce a broken worker.
-- `scripts/copy-codec-wasm.js` — copies the four codec `.wasm` files to the paths that rewrite points at.
+- `scripts/bundle-dicom-worker.js` — bundles `decodeImageFrameWorker` into `public/cs-dicom-loader/`. The component registers that pre-bundled worker with `getWebWorkerManager()` before calling the loader's `init()`, so the loader keeps the working registration.
+- `scripts/copy-codec-wasm.js` — copies the four codec `.wasm` files into one flat directory, `public/cs-dicom-loader/wasm/`.
 - `scripts/install-node-stubs.js` — stubs the Node built-ins (`fs`, `path`, `url`) that the codec glue and `@kitware/vtk.js`'s XML dependency chain require.
 
-The component registers that pre-bundled worker with `getWebWorkerManager()` before calling the loader's `init()`, so the loader keeps the working registration.
+The codec binaries are located at runtime by passing that directory to the loader as `wasmBasePath`:
+
+```ts
+dicomImageLoaderInit({
+  maxWebWorkers: 1,
+  wasmBasePath: new URL('cs-dicom-loader/wasm/', document.baseURI).href,
+});
+```
+
+One root for every codec, resolved against `document.baseURI` so the same build works at the site root and under a subpath. This replaces an earlier workaround that rewrote the codec paths inside the built worker bundle.
+
+> **`wasmBasePath` is not in a release yet.** It exists on the `feat/wasm-base-path` branch of Cornerstone3D. Until it ships, use `pnpm link:cs3d` (below) — otherwise decoding fails with `expected magic word 00 61 73 6d`, and `pnpm build` warns about it.
+
+## Testing against a local Cornerstone3D build
+
+`scripts/link-cs3d.js` points the app at a Cornerstone3D checkout so unreleased changes can be tested before they are published:
+
+```bash
+# in the Cornerstone3D checkout: build the package first
+cd ../cornerstone3D/packages/dicomImageLoader && pnpm build:esm
+
+# back here
+pnpm link:cs3d                  # defaults to ../cornerstone3D
+pnpm link:cs3d -- --repo /path/to/cornerstone3D
+pnpm link:cs3d -- --packages core,tools,metadata,utils,dicom-image-loader
+pnpm link:cs3d:status           # which build is each package using?
+pnpm unlink:cs3d                # restore the published build
+```
+
+It replaces the `dist` directory of each package inside `node_modules` with a copy from the checkout, keeping the published one alongside as `dist.published-backup`. **Re-run it after each Cornerstone3D rebuild** — it copies rather than symlinks, because a symlinked `dist` makes the bundler resolve the loader's own dependencies out of the Cornerstone3D checkout, where this app's Node built-in stubs don't exist, and the build fails with `Could not resolve "fs"`. A `pnpm install --force` also restores the published build.
+
+Because it is a copy, `dir`/`ls` on `node_modules/@cornerstonejs` shows an ordinary directory rather than a symlink — there is nothing to see there. Use `pnpm link:cs3d:status` to check the state, which reports a package as using the local build when the set-aside `dist.published-backup` is present:
+
+```
+@cornerstonejs/dicom-image-loader: LOCAL build (published 5.6.12 set aside in dist.published-backup)
+@cornerstonejs/core: published 5.6.12
+```
 
 ## Development server
 
