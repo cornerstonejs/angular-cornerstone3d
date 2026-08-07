@@ -8,6 +8,7 @@ const fs = require('fs');
 
 const root = path.resolve(__dirname, '..');
 const nodeModules = path.join(root, 'node_modules');
+const monorepoNodeModules = path.join(root, '..', '2-cornerstone3D', 'node_modules');
 const codecsDir = path.join(root, 'public', 'cs-dicom-loader', 'codecs');
 
 const codecs = [
@@ -18,7 +19,10 @@ const codecs = [
 ];
 
 for (const { shortName, file } of codecs) {
-  const src = path.join(nodeModules, '@cornerstonejs', shortName, file);
+  let src = path.join(nodeModules, '@cornerstonejs', shortName, file);
+  if (!fs.existsSync(src)) {
+    src = path.join(monorepoNodeModules, '@cornerstonejs', shortName, file);
+  }
   const outFile = path.join(codecsDir, shortName, path.basename(file));
   if (!fs.existsSync(src)) {
     console.warn('copy-codec-wasm: missing', src);
