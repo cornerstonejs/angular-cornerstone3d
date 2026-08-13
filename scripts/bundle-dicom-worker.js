@@ -9,23 +9,14 @@ const path = require('path');
 const fs = require('fs');
 
 const root = path.resolve(__dirname, '..');
-const entryCandidates = [
-  // Prefer built dist (works with file: protocol and published packages)
-  path.join(
-    root,
-    'node_modules/@cornerstonejs/dicom-image-loader/dist/esm/decodeImageFrameWorker.js'
-  ),
-  // Fallback to source when only src exists (e.g. dev symlink)
-  path.join(
-    root,
-    'node_modules/@cornerstonejs/dicom-image-loader/src/decodeImageFrameWorker.ts'
-  ),
-];
-const entry = entryCandidates.find((p) => fs.existsSync(p));
+const entry = path.join(
+  root,
+  'node_modules/@cornerstonejs/dicom-image-loader/dist/esm/decodeImageFrameWorker.js'
+);
 const outDir = path.join(root, 'public', 'cs-dicom-loader');
 const outfile = path.join(outDir, 'decodeImageFrameWorker.js');
 
-if (!entry) {
+if (!fs.existsSync(entry)) {
   console.warn('bundle-dicom-worker: dicom-image-loader not found, skipping.');
   process.exit(0);
 }
@@ -39,7 +30,6 @@ esbuild
     format: 'esm',
     platform: 'browser',
     absWorkingDir: root,
-    preserveSymlinks: false,
     outfile,
     minify: false,
     sourcemap: false,
@@ -61,7 +51,8 @@ esbuild
     ],
   })
   .then(() => {
-    // WASM paths are passed via decodeConfig.peerImportPaths/peerImportBasePath from the main thread (dicomImageLoaderInit).
+    // No post-processing: the worker resolves the codec binaries from the
+    // wasmBasePath passed to dicomImageLoaderInit on the main thread.
     console.log('bundle-dicom-worker: wrote', outfile);
   })
   .catch((err) => {

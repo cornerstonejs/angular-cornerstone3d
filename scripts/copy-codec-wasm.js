@@ -1,14 +1,16 @@
 /**
- * Copies codec .wasm files to public/cs-dicom-loader/codecs/<pkg-name>/...
- * Paths avoid '@' so static servers (e.g. serve) return the file instead of HTML.
- * The worker bundle is patched to request 'codecs/...' instead of '@cornerstonejs/...'.
+ * Copies the codec .wasm files into public/cs-dicom-loader/codecs/.
+ *
+ * They go in one flat directory because that is what the loader's
+ * `wasmBasePath` option expects: a single root holding every binary under its
+ * published file name. The path avoids '@' so static servers (e.g. serve)
+ * return the file instead of HTML.
  */
 const path = require('path');
 const fs = require('fs');
 
 const root = path.resolve(__dirname, '..');
 const nodeModules = path.join(root, 'node_modules');
-const monorepoNodeModules = path.join(root, '..', '2-cornerstone3D', 'node_modules');
 const codecsDir = path.join(root, 'public', 'cs-dicom-loader', 'codecs');
 
 const codecs = [
@@ -19,16 +21,13 @@ const codecs = [
 ];
 
 for (const { shortName, file } of codecs) {
-  let src = path.join(nodeModules, '@cornerstonejs', shortName, file);
-  if (!fs.existsSync(src)) {
-    src = path.join(monorepoNodeModules, '@cornerstonejs', shortName, file);
-  }
-  const outFile = path.join(codecsDir, shortName, path.basename(file));
+  const src = path.join(nodeModules, '@cornerstonejs', shortName, file);
+  const outFile = path.join(codecsDir, path.basename(file));
   if (!fs.existsSync(src)) {
     console.warn('copy-codec-wasm: missing', src);
     continue;
   }
-  fs.mkdirSync(path.dirname(outFile), { recursive: true });
+  fs.mkdirSync(codecsDir, { recursive: true });
   fs.copyFileSync(src, outFile);
   console.log('copy-codec-wasm:', shortName, '->', outFile);
 }

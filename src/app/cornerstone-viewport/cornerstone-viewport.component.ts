@@ -112,25 +112,11 @@ export class CornerstoneViewportComponent implements OnInit {
     }
 
     const base = document.baseURI || window.location.origin + '/';
-    const peerImportBasePath = new URL('cs-dicom-loader/codecs/', base).href;
-    const peerImportPaths: Record<string, string> = {
-      '@cornerstonejs/codec-charls/decodewasm': 'codec-charls/charlswasm_decode.wasm',
-      '@cornerstonejs/codec-libjpeg-turbo-8bit/decodewasm': 'codec-libjpeg-turbo-8bit/libjpegturbowasm_decode.wasm',
-      '@cornerstonejs/codec-openjpeg/decodewasm': 'codec-openjpeg/openjpegwasm_decode.wasm',
-      '@cornerstonejs/codec-openjph/wasm': 'codec-openjph/openjphjs.wasm',
-    };
-    const peerImport: (
-      moduleId: string,
-      fallback?: () => Promise<unknown>
-    ) => Promise<unknown> = async (moduleId, fallback) => {
-      const path = peerImportPaths[moduleId];
-      if (path && peerImportBasePath) {
-        return { default: new URL(path, peerImportBasePath).href };
-      }
-      return fallback ? await fallback() : null;
-    };
+    // The codec binaries are copied into public/ by scripts/copy-codec-wasm.js.
+    // Resolving against baseURI keeps this working under a non-root base href.
+    const wasmBasePath = new URL('cs-dicom-loader/codecs/', base).href;
 
-    csRenderInit({ peerImport });
+    csRenderInit();
     csToolsInit();
     // Register our worker first so init() does not register the broken @fs/... worker (dev)
     const workerUrl = new URL(
@@ -142,10 +128,7 @@ export class CornerstoneViewportComponent implements OnInit {
       () => new Worker(workerUrl, { type: 'module' }),
       { maxWorkerInstances: 1, overwrite: true }
     );
-    dicomImageLoaderInit({
-      maxWebWorkers: 1,
-      decodeConfig: { peerImportPaths, peerImportBasePath },
-    });
+    dicomImageLoaderInit({ maxWebWorkers: 1, wasmBasePath });
 
     const imageIds = await createImageIdsAndCacheMetaData({
       StudyInstanceUID:
