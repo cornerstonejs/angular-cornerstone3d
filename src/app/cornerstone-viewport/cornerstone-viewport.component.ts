@@ -111,6 +111,11 @@ export class CornerstoneViewportComponent implements OnInit {
       return imageIds;
     }
 
+    const base = document.baseURI || window.location.origin + '/';
+    // The codec binaries are copied into public/ by scripts/copy-codec-wasm.js.
+    // Resolving against baseURI keeps this working under a non-root base href.
+    const wasmBasePath = new URL('cs-dicom-loader/codecs/', base).href;
+
     csRenderInit();
     csToolsInit();
     // Register our worker first so init() does not register the broken @fs/... worker (dev)
@@ -123,7 +128,7 @@ export class CornerstoneViewportComponent implements OnInit {
       () => new Worker(workerUrl, { type: 'module' }),
       { maxWorkerInstances: 1, overwrite: true }
     );
-    dicomImageLoaderInit({ maxWebWorkers: 1 });
+    dicomImageLoaderInit({ maxWebWorkers: 1, wasmBasePath });
 
     const imageIds = await createImageIdsAndCacheMetaData({
       StudyInstanceUID:

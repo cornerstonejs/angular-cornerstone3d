@@ -16,7 +16,7 @@ const entry = path.join(
 const outDir = path.join(root, 'public', 'cs-dicom-loader');
 const outfile = path.join(outDir, 'decodeImageFrameWorker.js');
 
-if (!fs.existsSync(path.dirname(entry))) {
+if (!fs.existsSync(entry)) {
   console.warn('bundle-dicom-worker: dicom-image-loader not found, skipping.');
   process.exit(0);
 }
@@ -29,20 +29,30 @@ esbuild
     bundle: true,
     format: 'esm',
     platform: 'browser',
+    absWorkingDir: root,
     outfile,
     minify: false,
     sourcemap: false,
     logLevel: 'info',
+    plugins: [
+      {
+        name: 'node-builtins-stub',
+        setup(build) {
+          build.onResolve({ filter: /^(fs|path)$/ }, (args) => ({
+            path: args.path,
+            namespace: 'node-builtin-stub',
+          }));
+          build.onLoad({ filter: /.*/, namespace: 'node-builtin-stub' }, () => ({
+            contents: 'export default {};',
+            loader: 'js',
+          }));
+        },
+      },
+    ],
   })
   .then(() => {
-    // Patch worker: use codecs/ path and real .wasm filenames so Angular assets can copy from node_modules
-    let code = fs.readFileSync(outfile, 'utf8');
-    code = code.replace(/@cornerstonejs\//g, 'codecs/');
-    code = code.replace(/codecs\/codec-charls\/decodewasm/g, 'codecs/codec-charls/charlswasm_decode.wasm');
-    code = code.replace(/codecs\/codec-libjpeg-turbo-8bit\/decodewasm/g, 'codecs/codec-libjpeg-turbo-8bit/libjpegturbowasm_decode.wasm');
-    code = code.replace(/codecs\/codec-openjpeg\/decodewasm/g, 'codecs/codec-openjpeg/openjpegwasm_decode.wasm');
-    code = code.replace(/codecs\/codec-openjph\/wasm/g, 'codecs/codec-openjph/openjphjs.wasm');
-    fs.writeFileSync(outfile, code);
+    // No post-processing: the worker resolves the codec binaries from the
+    // wasmBasePath passed to dicomImageLoaderInit on the main thread.
     console.log('bundle-dicom-worker: wrote', outfile);
   })
   .catch((err) => {
